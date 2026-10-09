@@ -1,0 +1,53 @@
+name: Build Ukrainian TV APK
+
+on:
+workflow_dispatch:
+push:
+paths:
+- 'UkrainskeTV_source.zip'
+- '.github/workflows/**'
+
+jobs:
+build:
+runs-on: ubuntu-latest
+
+steps:
+  - name: Download repository
+    uses: actions/checkout@v4
+
+  - name: Extract Android project
+    run: |
+      mkdir extracted
+      unzip -q UkrainskeTV_source.zip -d extracted
+      PROJECT_DIR=$(find extracted -name settings.gradle -o -name settings.gradle.kts | head -n 1)
+      if [ -z "$PROJECT_DIR" ]; then
+        echo "Cannot find settings.gradle in the ZIP archive"
+        exit 1
+      fi
+      echo "PROJECT_DIR=$(dirname "$PROJECT_DIR")" >> "$GITHUB_ENV"
+
+  - name: Set up Java
+    uses: actions/setup-java@v4
+    with:
+      distribution: temurin
+      java-version: '17'
+
+  - name: Set up Gradle
+    uses: gradle/actions/setup-gradle@v4
+
+  - name: Build APK
+    run: |
+      cd "$PROJECT_DIR"
+      if [ -f gradlew ]; then
+        chmod +x gradlew
+        ./gradlew assembleDebug
+      else
+        gradle assembleDebug
+      fi
+
+  - name: Save APK
+    uses: actions/upload-artifact@v4
+    with:
+      name: UkrainskeTV-APK
+      path: '**/build/outputs/apk/debug/*.apk'
+      if-no-files-found: error
