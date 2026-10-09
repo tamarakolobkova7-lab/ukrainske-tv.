@@ -1,15 +1,19 @@
-name: Build Ukrainian TV APK
+name: Build Mikha TV APK
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'UkrainskeTV_fixed_source.zip'
+      - 'MikhaTV_fullscreen_flag_source.zip'
       - '.github/workflows/main.yml'
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,35 +24,50 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Check source archive
+        run: |
+          test -f MikhaTV_fullscreen_flag_source.zip || {
+            echo "ERROR: MikhaTV source ZIP not found"
+            ls -la
+            exit 1
+          }
+
+      - name: Extract Android project
+        run: |
+          mkdir -p source
+          unzip -q MikhaTV_fullscreen_flag_source.zip -d source
+          echo "Extracted files:"
+          find source -maxdepth 4 -type f | head -200
+
+      - name: Locate Gradle project
+        run: |
+          SETTINGS=$(find source -type f \
+            \( -name settings.gradle -o -name settings.gradle.kts \) \
+            -print -quit)
+
+          if [ -z "$SETTINGS" ]; then
+            echo "ERROR: settings.gradle not found in ZIP"
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$SETTINGS")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Found project: $PROJECT_DIR"
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Extract Android project
-        shell: bash
-        run: |
-          set -e
-          mkdir -p extracted
-          unzip -q UkrainskeTV_fixed_source.zip -d extracted
-          PROJECT_FILE=$(find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit)
-          if [ -z "$PROJECT_FILE" ]; then
-            echo "ERROR: Android project not found in ZIP"
-            exit 1
-          fi
-          echo "PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
-
-      - name: Build APK
-        shell: bash
-        run: |
-          set -e
-          cd "$PROJECT_DIR"
-          gradle assembleDebug
+      - name: Build debug APK
+        run: gradle --no-daemon assembleDebug
+        working-directory: ${{ env.PROJECT_DIR }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: UkrainskeTV-APK
-          path: extracted/**/build/outputs/apk/debug/*.apk
+          name: Mikha-TV-APK
+          path: |
+            source/**/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           
