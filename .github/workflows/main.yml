@@ -1,50 +1,53 @@
 name: Build Ukrainian TV APK
 
 on:
-workflow_dispatch:
-push:
-paths:
-- 'UkrainskeTV_source.zip'
-- '.github/workflows/**'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'UkrainskeTV_source.zip'
+      - '.github/workflows/**'
 
 jobs:
-build:
-runs-on: ubuntu-latest
-steps:
-- name: Download repository
-uses: actions/checkout@v4
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
 
-  - name: Extract Android project
-    run: |
-      mkdir extracted
-      unzip -q UkrainskeTV_source.zip -d extracted
-      PROJECT_FILE=$(find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)
-      if [ -z "$PROJECT_FILE" ]; then
-        echo "Cannot find settings.gradle in the ZIP archive"
-        exit 1
-      fi
-      echo "PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
+      - name: Extract Android project
+        shell: bash
+        run: |
+          set -e
+          mkdir extracted
+          unzip -q UkrainskeTV_source.zip -d extracted
+          PROJECT_FILE=$(find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)
+          if [ -z "$PROJECT_FILE" ]; then
+            echo "Cannot find settings.gradle in the ZIP archive"
+            exit 1
+          fi
+          echo "PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
 
-  - name: Set up Java
-    uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: '17'
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-  - name: Build APK
-    run: |
-      cd "$PROJECT_DIR"
-      if [ -f gradlew ]; then
-        chmod +x gradlew
-        ./gradlew assembleDebug
-      else
-        echo "ERROR: Gradle wrapper gradlew is missing from the project."
-        exit 1
-      fi
+      - name: Build APK
+        shell: bash
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+          if [ ! -f gradlew ]; then
+            echo "ERROR: Gradle wrapper gradlew is missing."
+            exit 1
+          fi
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
-  - name: Save APK
-    uses: actions/upload-artifact@v4
-    with:
-      name: UkrainskeTV-APK
-      path: '**/build/outputs/apk/debug/*.apk'
-      if-no-files-found: error
+      - name: Save APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: UkrainskeTV-APK
+          path: '**/build/outputs/apk/debug/*.apk'
+          if-no-files-found: error
