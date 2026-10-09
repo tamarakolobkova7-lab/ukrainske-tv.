@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'UkrainskeTV_source.zip'
+      - 'UkrainskeTV_fixed_source.zip'
       - '.github/workflows/main.yml'
 
 jobs:
@@ -30,7 +30,7 @@ jobs:
         run: |
           set -e
           mkdir -p extracted
-          unzip -q UkrainskeTV_source.zip -d extracted
+          unzip -q UkrainskeTV_fixed_source.zip -d extracted
           PROJECT_FILE=$(find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit)
           if [ -z "$PROJECT_FILE" ]; then
             echo "ERROR: Android project not found in ZIP"
@@ -51,3 +51,4 @@ jobs:
           name: UkrainskeTV-APK
           path: extracted/**/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          
